@@ -1,0 +1,802 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Ranking Diário de Favoritismo BBB26</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <style>
+    :root{
+      --bg:#0b0f14; --text:#e9f0fb; --muted:#9fb0c6; --line:rgba(255,255,255,.10);
+      --card:#121823; --shadow:0 14px 50px rgba(0,0,0,.55);
+      --btn:rgba(255,255,255,.04); --btnBorder:rgba(255,255,255,.14); --btnHover:rgba(255,255,255,.10);
+      --accent: rgba(122,162,255,.95);
+      --good: rgba(76,217,100,.18); --warn: rgba(255,193,7,.18); --bad: rgba(255,107,107,.18);
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      background:
+        radial-gradient(1200px 700px at 30% 0%, rgba(122,162,255,.22), transparent 60%),
+        radial-gradient(900px 550px at 90% 20%, rgba(76,217,100,.12), transparent 55%),
+        var(--bg);
+      color:var(--text);
+      overflow-x:hidden;
+    }
+    a{ color: var(--text); text-decoration: none; }
+    a:hover{ text-decoration: underline; }
+
+    header{
+      padding:16px 16px 12px;
+      border-bottom:1px solid var(--line);
+      position:sticky; top:0;
+      background: rgba(11,15,20,.78);
+      backdrop-filter: blur(10px);
+      z-index: 20;
+    }
+    .wrap{ max-width:1200px; margin:0 auto; }
+    .topbar{
+      display:flex; flex-wrap:wrap; gap:10px;
+      align-items:center; justify-content:space-between;
+    }
+    h1{ margin:0; font-size:18px; font-weight:900; letter-spacing:.2px; }
+    .badges{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .badge{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:7px 10px; border:1px solid var(--line);
+      border-radius:999px; background:rgba(255,255,255,.02);
+      color:var(--muted); font-size:12px; user-select:none;
+    }
+    .badge b{ color:var(--text); }
+    .badge .dot{ width:8px; height:8px; border-radius:999px; background: var(--accent); }
+
+    main{ padding:14px 16px 100px; }
+    .grid{
+      display:grid;
+      grid-template-columns: 1.25fr .75fr;
+      gap:12px;
+      align-items:start;
+    }
+    @media (max-width: 980px){
+      .grid{ grid-template-columns: 1fr; }
+    }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
+      border:1px solid var(--line);
+      border-radius:16px;
+      box-shadow: var(--shadow);
+      padding:12px;
+    }
+
+    .row{
+      display:flex; flex-wrap:wrap; gap:10px;
+      align-items:center; justify-content:space-between;
+      margin-bottom:10px;
+    }
+    .row .left, .row .right{
+      display:flex; flex-wrap:wrap; gap:10px; align-items:center;
+    }
+
+    .btn{
+      border:1px solid var(--btnBorder);
+      background:var(--btn);
+      color:var(--text);
+      padding:9px 11px;
+      border-radius:12px;
+      cursor:pointer;
+      font-weight:850;
+      transition:.15s ease;
+      user-select:none;
+      display:inline-flex; gap:8px; align-items:center;
+    }
+    .btn:hover{ background:var(--btnHover); transform:translateY(-1px); }
+    .btn:active{ transform:translateY(0); }
+
+    .toggle{
+      display:inline-flex; align-items:center; gap:10px;
+      padding:8px 10px; border:1px solid var(--line);
+      border-radius:12px; background:rgba(255,255,255,.02);
+      color:var(--muted); font-size:12px; user-select:none;
+    }
+    .toggle input{ width:auto; }
+
+    .chart-wrap{ height:560px; }
+    canvas{ width:100% !important; height:100% !important; }
+
+    /* Timeline */
+    .timeline{
+      width:100%;
+      display:flex; gap:10px; align-items:center;
+      margin-top:8px;
+    }
+    input[type="range"]{
+      width:100%;
+      accent-color: var(--accent);
+    }
+    .tlabel{
+      color:var(--muted);
+      font-size:12px;
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:8px 10px;
+      background: rgba(255,255,255,.02);
+      white-space:nowrap;
+    }
+
+    /* Podium */
+    .podium{
+      display:grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap:10px;
+      margin-top:10px;
+      align-items:end;
+    }
+    .pod{
+      border:1px solid var(--line);
+      border-radius:14px;
+      background: rgba(255,255,255,.02);
+      padding:10px;
+      display:flex;
+      flex-direction:column;
+      justify-content:flex-end;
+      min-height: 140px;
+      position:relative;
+      overflow:hidden;
+      cursor:pointer;
+      transition:.15s ease;
+    }
+    .pod:hover{ transform: translateY(-2px); border-color: rgba(122,162,255,.35); }
+    .pod::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      background: radial-gradient(220px 120px at 30% 0%, rgba(122,162,255,.18), transparent 60%);
+      pointer-events:none;
+    }
+    .pod small{ color:var(--muted); font-weight:900; letter-spacing:.2px; }
+    .pod b{ font-size:13px; line-height:1.2; margin-top:6px; }
+    .pod .rank{
+      position:absolute;
+      top:10px; left:10px;
+      width:34px; height:34px;
+      border-radius:12px;
+      display:flex; align-items:center; justify-content:center;
+      font-weight:950;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.03);
+      z-index:1;
+    }
+    .pod .delta{
+      margin-top:8px;
+      font-size:12px;
+      color:var(--muted);
+      font-weight:800;
+    }
+    .pod.one{ min-height: 180px; background: rgba(76,217,100,.10); }
+    .pod.two{ min-height: 160px; background: rgba(255,193,7,.08); }
+    .pod.three{ min-height: 150px; background: rgba(255,107,107,.08); }
+
+    /* Quick stats */
+    .stats{
+      display:grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap:10px;
+      margin-top:10px;
+    }
+    @media (max-width: 980px){
+      .stats{ grid-template-columns: 1fr; }
+    }
+    .stat{
+      border:1px solid var(--line);
+      border-radius:14px;
+      background: rgba(255,255,255,.02);
+      padding:10px;
+      position:relative;
+      overflow:hidden;
+    }
+    .stat .k{ color:var(--muted); font-size:12px; font-weight:900; }
+    .stat .v{ margin-top:6px; font-weight:950; font-size:14px; }
+    .stat .s{ margin-top:4px; color:var(--muted); font-size:12px; font-weight:750; }
+
+    /* Selection panel */
+    .panel{
+      position:fixed;
+      right:14px;
+      bottom:14px;
+      width:min(430px, calc(100vw - 28px));
+      background: rgba(18,24,35,.92);
+      border:1px solid var(--line);
+      border-radius:16px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      overflow:hidden;
+      z-index: 60;
+    }
+    .panel.hidden{ display:none !important; }
+
+    .panel-head{
+      display:flex; align-items:center; justify-content:space-between;
+      padding:10px 12px;
+      border-bottom:1px solid var(--line);
+    }
+    .panel-title{
+      display:flex; flex-direction:column; gap:2px;
+    }
+    .panel-title b{ font-size:13px; }
+    .panel-title span{ font-size:12px; color:var(--muted); }
+    .panel-body{
+      padding:10px 12px 12px;
+      max-height: 60vh;
+      overflow:auto;
+    }
+
+    .xbtn{
+      border:1px solid var(--btnBorder);
+      background:rgba(255,255,255,.03);
+      color:var(--text);
+      border-radius:10px;
+      padding:7px 9px;
+      cursor:pointer;
+      font-weight:950;
+    }
+    .xbtn:hover{ background:rgba(255,255,255,.09); }
+
+    .search{
+      width:100%;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.03);
+      padding:10px 10px;
+      border-radius:12px;
+      color:var(--text);
+      outline:none;
+    }
+    .chips{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top:10px;
+    }
+    .pchip{
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.02);
+      padding:8px 10px;
+      border-radius:999px;
+      cursor:pointer;
+      user-select:none;
+      font-size:12px;
+      color: var(--muted);
+      display:inline-flex; gap:8px; align-items:center;
+    }
+    .pchip.on{
+      color: var(--text);
+      border-color: rgba(122,162,255,.55);
+      background: rgba(122,162,255,.14);
+    }
+    .pchip .dot{ width:8px; height:8px; border-radius:999px; background: rgba(255,255,255,.35); }
+    .pchip.on .dot{ background: rgba(122,162,255,.9); }
+
+    /* News */
+    .news{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      margin-top:10px;
+    }
+    .news a{
+      display:block;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.02);
+      padding:10px 10px;
+      border-radius:14px;
+      transition:.15s ease;
+    }
+    .news a:hover{ transform: translateY(-1px); border-color: rgba(122,162,255,.25); }
+    .news a .src{ color:var(--muted); font-size:12px; font-weight:800; }
+    .news a .ttl{ margin-top:4px; font-weight:950; font-size:13px; line-height:1.25; }
+    .news a .desc{ margin-top:6px; color:var(--muted); font-size:12px; line-height:1.35; }
+
+    /* tiny */
+    .mini{ font-size:12px; color:var(--muted); line-height:1.35; }
+  </style>
+</head>
+
+<body>
+<header>
+  <div class="wrap topbar">
+    <h1>Ranking Diário de Favoritismo BBB26</h1>
+    <div class="badges">
+      <span class="badge"><span class="dot"></span><b id="todayLabel">—</b></span>
+      <span class="badge">Atualizado: <b id="updatedAt">—</b></span>
+      <span class="badge">Proxy</span>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="wrap grid">
+
+    <!-- LEFT: chart -->
+    <section class="card">
+      <div class="row">
+        <div class="left">
+          <label class="toggle"><input type="checkbox" id="toggleLegend" checked> Legenda</label>
+          <label class="toggle"><input type="checkbox" id="togglePoints" checked> Pontos</label>
+        </div>
+        <div class="right">
+          <button class="btn" id="btnOpenSelect">🎯 Seleções</button>
+          <button class="btn" id="btnSelectAll">✅ Todos</button>
+          <button class="btn" id="btnClearAll">🚫 Limpar</button>
+          <button class="btn" id="btnTop3">🏆 Top 3</button>
+          <button class="btn" id="btnDownloadPNG">🖼️ PNG</button>
+        </div>
+      </div>
+
+      <div class="chart-wrap"><canvas id="rankChart"></canvas></div>
+
+      <div class="timeline">
+        <button class="btn" id="btnPrevDay">◀</button>
+        <input type="range" id="daySlider" min="0" max="0" value="0" />
+        <button class="btn" id="btnNextDay">▶</button>
+        <div class="tlabel" id="sliderLabel">—</div>
+      </div>
+    </section>
+
+    <!-- RIGHT: podium + stats + news -->
+    <aside class="card">
+      <div class="mini" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+        <span><b id="pickedDayLabel">—</b></span>
+        <span id="pickedDayMeta">—</span>
+      </div>
+
+      <div class="podium" id="podium"></div>
+
+      <div class="stats" id="stats"></div>
+
+      <div class="news" id="newsList"></div>
+    </aside>
+
+  </div>
+</main>
+
+<!-- Floating Selection Panel -->
+<div class="panel hidden" id="selectPanel">
+  <div class="panel-head">
+    <div class="panel-title">
+      <b>Seleções</b>
+      <span id="selSubtitle">—</span>
+    </div>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <button class="xbtn" id="btnPanelAll" title="Selecionar todos">✅</button>
+      <button class="xbtn" id="btnPanelNone" title="Limpar">🚫</button>
+      <button class="xbtn" id="btnPanelClose" title="Fechar">✕</button>
+    </div>
+  </div>
+  <div class="panel-body">
+    <input class="search" id="searchPeople" placeholder="Buscar…" />
+    <div class="chips" id="peopleChips"></div>
+  </div>
+</div>
+
+<script>
+  // ----------------------------
+  // State + persistence
+  // ----------------------------
+  const LS_KEY = "bbb26_daily_rank_ui_v1";
+
+  const UI = {
+    data: null,
+    chart: null,
+    dayIndex: 0,
+  };
+
+  function loadUIState(){
+    try{
+      const raw = localStorage.getItem(LS_KEY);
+      if(!raw) return {};
+      return JSON.parse(raw) || {};
+    }catch{ return {}; }
+  }
+  function saveUIState(){
+    const state = {
+      dayIndex: UI.dayIndex,
+      // store visible datasets by name
+      visible: UI.chart ? UI.chart.data.datasets.map((ds, i) => [ds.label, UI.chart.isDatasetVisible(i)]) : null
+    };
+    localStorage.setItem(LS_KEY, JSON.stringify(state));
+  }
+
+  function safeText(s){ return String(s ?? "").replace(/[<>&"]/g, m => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[m])); }
+
+  // ----------------------------
+  // Fetch data.json
+  // ----------------------------
+  async function loadData(){
+    const res = await fetch("./data.json", { cache: "no-store" });
+    if(!res.ok) throw new Error("Falha ao carregar data.json");
+    return await res.json();
+  }
+
+  // ----------------------------
+  // Chart
+  // ----------------------------
+  function buildDatasets(days, people, positionsByDay){
+    const showPoints = document.getElementById("togglePoints").checked;
+    return people.map(name => {
+      const data = days.map(d => {
+        const v = (positionsByDay[d] || {})[name];
+        return (v === undefined) ? null : v;
+      });
+      return {
+        label: name,
+        data,
+        borderWidth: 2,
+        pointRadius: showPoints ? 3 : 0,
+        pointHoverRadius: 6,
+        spanGaps: false,
+        tension: 0.2
+      };
+    });
+  }
+
+  function renderChart(){
+    const ctx = document.getElementById("rankChart");
+    const { days, people, positionsByDay } = UI.data;
+    const labels = days.map(d => d);
+
+    if(UI.chart) UI.chart.destroy();
+
+    UI.chart = new Chart(ctx, {
+      type: "line",
+      data: { labels, datasets: buildDatasets(days, people, positionsByDay) },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "nearest", intersect: false },
+        plugins: {
+          legend: {
+            display: document.getElementById("toggleLegend").checked,
+            position: "right",
+            labels: { boxWidth: 12, boxHeight: 12, color: "#e9f0fb" },
+            onClick: (e, item, legend) => {
+              const idx = item.datasetIndex;
+              const ci = legend.chart;
+              ci.toggleDataVisibility(idx);
+              ci.update();
+              syncChipsFromChart();
+              renderRight();
+              saveUIState();
+            }
+          },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => {
+                const v = ctx.parsed.y;
+                return (v == null) ? `${ctx.dataset.label}: —` : `${ctx.dataset.label}: posição ${v}`;
+              }
+            }
+          }
+        },
+        scales: {
+          y: {
+            reverse: true,
+            ticks: { stepSize: 1, color: "#9fb0c6" },
+            grid: { color: "rgba(255,255,255,.08)" },
+            title: { display: true, text: "Posição (1 = melhor)", color: "#9fb0c6" }
+          },
+          x: {
+            ticks: { color: "#9fb0c6", maxRotation: 0, autoSkip: true },
+            grid: { color: "rgba(255,255,255,.06)" }
+          }
+        }
+      }
+    });
+
+    // click chart -> jump to day index
+    document.getElementById("rankChart").onclick = (evt) => {
+      const points = UI.chart.getElementsAtEventForMode(evt, 'nearest', { intersect: false }, true);
+      if(!points.length) return;
+      UI.dayIndex = points[0].index;
+      syncTimeline();
+      renderRight();
+      saveUIState();
+    };
+  }
+
+  function setAllVisibility(visible){
+    UI.chart.data.datasets.forEach((_, i) => UI.chart.setDatasetVisibility(i, visible));
+    UI.chart.update();
+    syncChipsFromChart();
+    renderRight();
+    saveUIState();
+  }
+
+  function getSelectedPeople(){
+    const selected = [];
+    UI.chart.data.datasets.forEach((ds, idx) => {
+      if(UI.chart.isDatasetVisible(idx)) selected.push(ds.label);
+    });
+    return selected;
+  }
+
+  // ----------------------------
+  // Selection chips
+  // ----------------------------
+  function buildChips(){
+    const wrap = document.getElementById("peopleChips");
+    wrap.innerHTML = "";
+    const peopleSorted = [...UI.data.people].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+    for(const name of peopleSorted){
+      const el = document.createElement("div");
+      el.className = "pchip on";
+      el.dataset.name = name;
+      el.innerHTML = `<span class="dot"></span><span>${safeText(name)}</span>`;
+      el.onclick = () => togglePerson(name);
+      wrap.appendChild(el);
+    }
+  }
+
+  function togglePerson(name){
+    const idx = UI.chart.data.datasets.findIndex(d => d.label === name);
+    if(idx < 0) return;
+    UI.chart.setDatasetVisibility(idx, !UI.chart.isDatasetVisible(idx));
+    UI.chart.update();
+    syncChipsFromChart();
+    renderRight();
+    saveUIState();
+  }
+
+  function syncChipsFromChart(){
+    document.querySelectorAll(".pchip").forEach(ch => {
+      const name = ch.dataset.name;
+      const idx = UI.chart.data.datasets.findIndex(d => d.label === name);
+      const on = idx >= 0 ? UI.chart.isDatasetVisible(idx) : false;
+      ch.classList.toggle("on", !!on);
+    });
+    document.getElementById("selSubtitle").textContent =
+      `${getSelectedPeople().length} selecionados`;
+  }
+
+  function filterChips(q){
+    const s = q.trim().toLowerCase();
+    document.querySelectorAll(".pchip").forEach(ch => {
+      const name = (ch.dataset.name || "").toLowerCase();
+      ch.style.display = (!s || name.includes(s)) ? "inline-flex" : "none";
+    });
+  }
+
+  // ----------------------------
+  // Timeline
+  // ----------------------------
+  function syncTimeline(){
+    const days = UI.data.days;
+    const slider = document.getElementById("daySlider");
+    slider.max = Math.max(0, days.length - 1);
+    UI.dayIndex = Math.max(0, Math.min(UI.dayIndex, days.length - 1));
+    slider.value = UI.dayIndex;
+
+    const d = days[UI.dayIndex];
+    document.getElementById("sliderLabel").textContent = d;
+    document.getElementById("pickedDayLabel").textContent = d;
+  }
+
+  // ----------------------------
+  // Right side: podium + stats + news
+  // ----------------------------
+  function deltaText(delta){
+    if(delta === null || delta === undefined) return "";
+    if(delta === 0) return "→ 0";
+    return delta > 0 ? `↑ ${delta}` : `↓ ${Math.abs(delta)}`;
+  }
+
+  function computeTopN(day, n){
+    const posObj = UI.data.positionsByDay[day] || {};
+    const selected = new Set(getSelectedPeople());
+    const rows = Object.entries(posObj)
+      .filter(([name]) => selected.has(name))
+      .map(([name,pos]) => ({name, pos:Number(pos)}))
+      .filter(x => Number.isFinite(x.pos))
+      .sort((a,b)=>a.pos-b.pos);
+    return rows.slice(0,n);
+  }
+
+  function renderPodium(){
+    const day = UI.data.days[UI.dayIndex];
+    const top = computeTopN(day, 3);
+
+    // 2/1/3 arrangement
+    const slot = [top[1], top[0], top[2]];
+    const labels = ["2º", "1º", "3º"];
+    const classes = ["two", "one", "three"];
+    const deltas = UI.data.deltasByDay?.[day] || {};
+
+    const podium = document.getElementById("podium");
+    podium.innerHTML = "";
+
+    for(let i=0;i<3;i++){
+      const item = slot[i];
+      const div = document.createElement("div");
+      div.className = `pod ${classes[i]}`;
+      div.innerHTML = `
+        <div class="rank">${labels[i]}</div>
+        <small>${item ? `Posição #${item.pos}` : "—"}</small>
+        <b>${item ? safeText(item.name) : "—"}</b>
+        <div class="delta">${item ? deltaText(deltas[item.name]) : ""}</div>
+      `;
+      // click podium: filter only these 3
+      div.onclick = () => {
+        setAllVisibility(false);
+        const names = top.map(x => x.name);
+        for(const nm of names){
+          const idx = UI.chart.data.datasets.findIndex(d => d.label === nm);
+          if(idx >= 0) UI.chart.setDatasetVisibility(idx, true);
+        }
+        UI.chart.update();
+        syncChipsFromChart();
+        renderRight();
+        saveUIState();
+      };
+      podium.appendChild(div);
+    }
+  }
+
+  function renderStats(){
+    const day = UI.data.days[UI.dayIndex];
+    const deltas = UI.data.deltasByDay?.[day] || {};
+
+    // biggest up/down among selected
+    const selected = getSelectedPeople();
+    let up = null, down = null;
+    for(const name of selected){
+      const d = deltas[name];
+      if(d === null || d === undefined) continue;
+      if(up === null || d > up.delta) up = { name, delta: d };
+      if(down === null || d < down.delta) down = { name, delta: d };
+    }
+
+    const leader = computeTopN(day, 1)[0]?.name || "—";
+    const stats = document.getElementById("stats");
+    stats.innerHTML = `
+      <div class="stat">
+        <div class="k">Líder do dia</div>
+        <div class="v">${safeText(leader)}</div>
+      </div>
+      <div class="stat">
+        <div class="k">Maior subida</div>
+        <div class="v">${up ? safeText(up.name) : "—"}</div>
+        <div class="s">${up ? deltaText(up.delta) : ""}</div>
+      </div>
+      <div class="stat">
+        <div class="k">Maior queda</div>
+        <div class="v">${down ? safeText(down.name) : "—"}</div>
+        <div class="s">${down ? deltaText(down.delta) : ""}</div>
+      </div>
+    `;
+  }
+
+  function renderNews(){
+    const day = UI.data.days[UI.dayIndex];
+    const items = (UI.data.newsByDay && UI.data.newsByDay[day]) ? UI.data.newsByDay[day] : [];
+    const list = document.getElementById("newsList");
+    list.innerHTML = "";
+    for(const n of items){
+      const a = document.createElement("a");
+      a.href = n.url;
+      a.target = "_blank";
+      a.rel = "noopener";
+      a.innerHTML = `
+        <div class="src">${safeText(n.src || "")}</div>
+        <div class="ttl">${safeText(n.title || "")}</div>
+        <div class="desc">${safeText(n.desc || "")}</div>
+      `;
+      list.appendChild(a);
+    }
+  }
+
+  function renderRight(){
+    const day = UI.data.days[UI.dayIndex];
+    const meta = UI.data.metaByDay?.[day];
+    document.getElementById("pickedDayMeta").textContent = meta ? `${meta.sources} fontes • ${meta.votesLabel || ""}`.trim() : "";
+    renderPodium();
+    renderStats();
+    renderNews();
+  }
+
+  // ----------------------------
+  // Top3 button (filter top3 of current day)
+  // ----------------------------
+  function showOnlyTop3(){
+    const day = UI.data.days[UI.dayIndex];
+    const top = computeTopN(day, 3).map(x => x.name);
+    setAllVisibility(false);
+    for(const name of top){
+      const idx = UI.chart.data.datasets.findIndex(d => d.label === name);
+      if(idx >= 0) UI.chart.setDatasetVisibility(idx, true);
+    }
+    UI.chart.update();
+    syncChipsFromChart();
+    renderRight();
+    saveUIState();
+  }
+
+  // ----------------------------
+  // Wire events
+  // ----------------------------
+  function wire(){
+    document.getElementById("toggleLegend").addEventListener("change", () => { renderChart(); applySavedVisibility(); syncChipsFromChart(); renderRight(); });
+    document.getElementById("togglePoints").addEventListener("change", () => { renderChart(); applySavedVisibility(); syncChipsFromChart(); renderRight(); });
+
+    document.getElementById("btnOpenSelect").addEventListener("click", () => document.getElementById("selectPanel").classList.toggle("hidden"));
+    document.getElementById("btnPanelClose").addEventListener("click", () => document.getElementById("selectPanel").classList.add("hidden"));
+    document.getElementById("btnSelectAll").addEventListener("click", () => setAllVisibility(true));
+    document.getElementById("btnClearAll").addEventListener("click", () => setAllVisibility(false));
+    document.getElementById("btnPanelAll").addEventListener("click", () => setAllVisibility(true));
+    document.getElementById("btnPanelNone").addEventListener("click", () => setAllVisibility(false));
+    document.getElementById("btnTop3").addEventListener("click", () => showOnlyTop3());
+
+    document.getElementById("btnDownloadPNG").addEventListener("click", () => {
+      const a = document.createElement("a");
+      a.href = UI.chart.toBase64Image();
+      a.download = "bbb26-ranking-diario.png";
+      a.click();
+    });
+
+    document.getElementById("searchPeople").addEventListener("input", (e) => filterChips(e.target.value));
+
+    document.getElementById("daySlider").addEventListener("input", (e) => {
+      UI.dayIndex = Number(e.target.value || 0);
+      syncTimeline();
+      renderRight();
+      saveUIState();
+    });
+
+    document.getElementById("btnPrevDay").addEventListener("click", () => {
+      UI.dayIndex = Math.max(0, UI.dayIndex - 1);
+      syncTimeline(); renderRight(); saveUIState();
+    });
+    document.getElementById("btnNextDay").addEventListener("click", () => {
+      UI.dayIndex = Math.min(UI.data.days.length - 1, UI.dayIndex + 1);
+      syncTimeline(); renderRight(); saveUIState();
+    });
+  }
+
+  function applySavedVisibility(){
+    const st = loadUIState();
+    if(!st.visible || !Array.isArray(st.visible)) return;
+    for(const [name, vis] of st.visible){
+      const idx = UI.chart.data.datasets.findIndex(d => d.label === name);
+      if(idx >= 0) UI.chart.setDatasetVisibility(idx, !!vis);
+    }
+    UI.chart.update();
+  }
+
+  // ----------------------------
+  // Init
+  // ----------------------------
+  (async function init(){
+    UI.data = await loadData();
+
+    // header badges
+    document.getElementById("updatedAt").textContent = UI.data.updatedAt || "—";
+
+    // choose default day: last day, or saved
+    const st = loadUIState();
+    UI.dayIndex = (typeof st.dayIndex === "number") ? st.dayIndex : (UI.data.days.length - 1);
+
+    // today label: last day
+    document.getElementById("todayLabel").textContent = UI.data.days[UI.data.days.length - 1] || "—";
+
+    renderChart();
+    applySavedVisibility();
+    buildChips();
+    syncChipsFromChart();
+    syncTimeline();
+    renderRight();
+    wire();
+  })();
+</script>
+</body>
+</html>
