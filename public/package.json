@@ -1,46 +1,8 @@
 {
-  "config": {
-    "sourceWeights": {
-      "UOL": 0.45,
-      "Votalhada": 0.35,
-      "Metropoles": 0.20
-    }
-  },
-  "days": [
-    {
-      "date": "2026-02-21",
-      "sources": [
-        {
-          "name": "UOL",
-          "values": {
-            "Ana Paula": 39.25,
-            "Jonas": 25.39,
-            "Alberto Cowboy": 16.43,
-            "Milena": 4.86,
-            "Chaiany": 4.71,
-            "Samira": 4.67
-          }
-        },
-        {
-          "name": "Votalhada",
-          "values": {
-            "Ana Paula": 52.71,
-            "Chaiany": 13.53,
-            "Alberto Cowboy": 12.38,
-            "Jonas": 10.28,
-            "Babu": 3.54
-          }
-        }
-      ],
-      "news": [
-        {
-          "src": "gshow",
-          "title": "Chaiany vence a Prova do Anjo",
-          "desc": "Vitória mexe com alianças e leitura de favoritismo.",
-          "url": "https://gshow.globo.com/..."
-        }
-      ],
-      "votesLabel": "proxy"
-    }
-  ]
+  "name": "bbb26-ranking-diario",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:data": "node scripts/compute.js"
+  }
 }
