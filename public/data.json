@@ -1,0 +1,19 @@
+{
+  "updatedAt": "2026-02-21 23:59 BRT",
+  "days": ["2026-02-18","2026-02-19","2026-02-20","2026-02-21"],
+  "people": ["Ana Paula","Jonas","Chaiany","Alberto Cowboy","Jordana"],
+  "positionsByDay": {
+    "2026-02-21": { "Ana Paula": 1, "Jonas": 2, "Alberto Cowboy": 3, "Chaiany": 4, "Jordana": 5 }
+  },
+  "deltasByDay": {
+    "2026-02-21": { "Ana Paula": 0, "Jonas": 1, "Alberto Cowboy": -1 }
+  },
+  "metaByDay": {
+    "2026-02-21": { "sources": 3, "votesLabel": "proxy" }
+  },
+  "newsByDay": {
+    "2026-02-21": [
+      { "src":"gshow", "title":"...", "desc":"...", "url":"https://..." }
+    ]
+  }
+}
